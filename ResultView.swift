@@ -3,6 +3,7 @@ import AVFoundation // Import AVFoundation for Text-to-Speech
 
 struct ResultView: View {
     @State private var selectedLanguage: String // State to hold the selected language
+    @State private var navigateToNoteView = false
     let availableLanguages = [
         "Chinese Cantonese",
         "Chinese Mandarin",
@@ -20,7 +21,7 @@ struct ResultView: View {
         "Chinese Cantonese": ("枱", "Table"),
         "Chinese Mandarin": ("桌子", "Table"),
         "English": ("Table", "Table"),
-        "French": ("Table", "Table"),
+        "French": ("Pasta", "Table"),
         "Japanese": ("テーブル", "Table"),
         "Korean": ("테이블", "Table"),
         "Spanish": ("Mesa", "Table")
@@ -89,29 +90,40 @@ struct ResultView: View {
                     .padding()
                     .foregroundColor(Color(hex: "#871BAC")) // Change text color to custom hex
             }
-
-            // Pronunciation Button (Speaker)
-            Button(action: {
-                if let translation = translations[selectedLanguage] {
-                    speak(text: translation.0) // Speak the translated word in the selected language
+            
+            NavigationLink(destination: NoteView(), isActive: $navigateToNoteView) {
+                EmptyView()
+            }
+            HStack {
+                Button(action: {
+                    navigateToNoteView = true
+                }) {
+                    HStack{
+                        Image(systemName: "note.text")
+                        .frame(width: 150,height: 150)                    }
                 }
-            }) {
-                Image(systemName: "speaker.wave.2.fill")
-                    .resizable()
-                    .frame(width: 50, height: 50)
-                    .padding()
-                    .foregroundColor(Color(hex: "#871BAC")) // Change icon color to custom hex
-                    .accessibilityLabel("Play pronunciation")
+                // Pronunciation Button (Speaker)
+                Button(action: {
+                    if let translation = translations[selectedLanguage] {
+                        speak(text: translation.0) // Speak the translated word in the selected language
+                    }
+                }) {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .resizable()
+                        .frame(width: 50, height: 50)
+                        .padding()
+                        .foregroundColor(Color(hex: "#871BAC")) // Change icon color to custom hex
+                        .accessibilityLabel("Play pronunciation")
+                }
+                
+                // Word in the default language (English)
+                if let translation = translations[selectedLanguage] {
+                    Text(translation.1) // Show English word
+                        .font(.title2)
+                        .padding()
+                        .foregroundColor(Color(hex: "#871BAC")) // Change text color to custom hex
+                }
             }
-
-            // Word in the default language (English)
-            if let translation = translations[selectedLanguage] {
-                Text(translation.1) // Show English word
-                    .font(.title2)
-                    .padding()
-                    .foregroundColor(Color(hex: "#871BAC")) // Change text color to custom hex
-            }
-
             Spacer()
         }
     }
