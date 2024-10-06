@@ -1,7 +1,8 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from google.cloud import vision
 import io
 import os
+import base64
 
 app = Flask(__name__)
 
@@ -12,26 +13,25 @@ os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credential_path
 # Create a Google Cloud Vision client
 client = vision.ImageAnnotatorClient()
 
-
-# Simple Hello, World! endpoint
-@app.route('/')
-def helloworld():
-    return 'Hello, World!', 200
-
-
-# New endpoint to trigger Google Cloud Vision and return full label annotations
-@app.route('/vision', methods=['GET'])
-def access_vision_api():
+# Endpoint to handle image upload and display it (for testing)
+@app.route('/upload', methods=['POST'])
+def upload_image():
     try:
-        # Path to the image file (for now, hard-coded)
-        image_path = "/Users/olivia/Desktop/Python/picSpeaks/assets/panda.jpg"  # Replace with your image file
+        # Get the JSON data from the request
+        data = request.get_json()
 
-        # Read the image file
-        with io.open(image_path, 'rb') as image_file:
-            content = image_file.read()
+        # Get the base64-encoded image from the request
+        base64_image = data['image']
 
-        # Create a Vision API image object
-        image = vision.Image(content=content)
+        # Decode the base64-encoded image
+        image_data = base64.b64decode(base64_image)
+
+        # Save the image temporarily for viewing (you can skip this if not needed)
+        with open("/Users/olivia/Desktop/Python/picSpeaks/assets/uploaded_image.jpg", "wb") as f:
+            f.write(image_data)
+
+        # Create an image object for Google Cloud Vision
+        image = vision.Image(content=image_data)
 
         # Perform label detection on the image
         response = client.label_detection(image=image)
@@ -70,7 +70,5 @@ def access_vision_api():
             'error': str(e)
         }), 500
 
-    # Main block to run the Flask app
 if __name__ == '__main__':
-    # Host the Flask app on all network interfaces (0.0.0.0) so it can be accessed externally
     app.run(host='0.0.0.0', port=8000)
