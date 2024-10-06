@@ -1,9 +1,12 @@
 import SwiftUI
-import AVFoundation // Import AVFoundation for Text-to-Speech
+import AVFoundation
 
 struct ResultView: View {
-    @State private var selectedLanguage: String // State to hold the selected language
-    @State private var navigateToNoteView = false
+    @State var selectedLanguage: String // State to hold the selected language
+    var selectedImage: UIImage? // The selected image
+    var highestScoreLabel: String?  // The highest label returned from the backend
+    @State var navigateToNoteView = false
+    let speechSynthesizer = AVSpeechSynthesizer()
     let availableLanguages = [
         "Chinese Cantonese",
         "Chinese Mandarin",
@@ -11,39 +14,49 @@ struct ResultView: View {
         "French",
         "Japanese",
         "Korean",
-        "Spanish"
-    ] // List of available languages sorted alphabetically
-
-    var selectedImage: UIImage? // Accept the selected image
-    
-    // Dictionary to map translations (you can expand this)
-    let translations: [String: (String, String)] = [
-        "Chinese Cantonese": ("枱", "Table"),
-        "Chinese Mandarin": ("桌子", "Table"),
-        "English": ("Table", "Table"),
-        "French": ("Pasta", "Table"),
-        "Japanese": ("テーブル", "Table"),
-        "Korean": ("테이블", "Table"),
-        "Spanish": ("Mesa", "Table")
+        "Spanish",
+        "Hindi"
     ]
-    
-    // Speech synthesizer instance
-    let speechSynthesizer = AVSpeechSynthesizer()
 
-    init(selectedLanguage: String, selectedImage: UIImage?) {
-        _selectedLanguage = State(initialValue: selectedLanguage) // Initialize selectedLanguage with the value from MainView
-        self.selectedImage = selectedImage
+    // Function to convert text to speech
+    func languageCode(for language: String) -> String {
+        switch language {
+        case "Chinese Cantonese":
+            return "zh-HK"
+        case "Chinese Mandarin":
+            return "zh-CN"
+        case "English":
+            return "en-US"
+        case "French":
+            return "fr-FR"
+        case "Japanese":
+            return "ja-JP"
+        case "Korean":
+            return "ko-KR"
+        case "Spanish":
+            return "es-ES"
+        case "Hindi":
+            return "hi-IN"
+        default:
+            return "en-US" // Default to English if unknown
+        }
     }
-    
+
+    // Helper function to get the language code based on the selected language
+    func speak(text: String) {
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = AVSpeechSynthesisVoice(language: languageCode(for: selectedLanguage)) // Set the voice language
+        speechSynthesizer.speak(utterance) // Speak the text
+    }
+
     var body: some View {
         VStack {
-            // App title
             Text("PicSpeaks")
                 .font(.largeTitle)
                 .fontWeight(.bold)
                 .padding()
                 .foregroundColor(Color(hex: "#871BAC")) // Change title color to custom hex
-
+            
             // Display and allow user to pick the target language
             HStack {
                 Text("Language: ")
@@ -61,51 +74,56 @@ struct ResultView: View {
                 .foregroundColor(Color(hex: "#871BAC")) // Change picker text color to custom hex
             }
             .padding()
-
-            // Display the selected or captured image
+            
+            // Display the selected image
             if let image = selectedImage {
-                Image(uiImage: image) // Display the actual selected image
+                Image(uiImage: image)
                     .resizable()
-                    .aspectRatio(contentMode: .fit) // Maintain the original aspect ratio
-                    .frame(maxWidth: 300) // Limit the maximum width
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: 300)
                     .padding()
             } else {
-                // If no image is available, show a placeholder
                 Image(systemName: "photo")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(maxWidth: 300) // Limit the maximum width
+                    .frame(maxWidth: 300)
                     .padding()
-            }
-
-            // Translated Word Display (Target language)
-            if let translation = translations[selectedLanguage] {
-                Text(translation.0) // Show translated word
-                    .font(.largeTitle)
-                    .padding()
-                    .foregroundColor(Color(hex: "#871BAC")) // Change text color to custom hex
-            } else {
-                Text("Translation Unavailable")
-                    .font(.largeTitle)
-                    .padding()
-                    .foregroundColor(Color(hex: "#871BAC")) // Change text color to custom hex
             }
             
+            // Updated: Display the highest label returned by the backend
+            if let label = highestScoreLabel {
+                Text("Detected Object: \(label)")
+                    .font(.title)
+                    .fontWeight(.bold)  // Making the label more prominent
+                    .foregroundColor(Color(hex: "#871BAC"))  // Apply the custom color
+                    .padding()
+            } else {
+                Text("No label detected")
+                    .font(.title)
+                    .foregroundColor(Color.red)  // Set red color for error case
+                    .padding()
+            }
+            
+            Spacer()
+
             NavigationLink(destination: NoteView(), isActive: $navigateToNoteView) {
                 EmptyView()
             }
+            
             HStack {
                 Button(action: {
                     navigateToNoteView = true
                 }) {
                     HStack{
                         Image(systemName: "note.text")
-                        .frame(width: 150,height: 150)                    }
+                            .frame(width: 150, height: 150)
+                    }
                 }
+                
                 // Pronunciation Button (Speaker)
                 Button(action: {
-                    if let translation = translations[selectedLanguage] {
-                        speak(text: translation.0) // Speak the translated word in the selected language
+                    if let label = highestScoreLabel {
+                        speak(text: label)  // Speak the highest scored label
                     }
                 }) {
                     Image(systemName: "speaker.wave.2.fill")
@@ -115,45 +133,7 @@ struct ResultView: View {
                         .foregroundColor(Color(hex: "#871BAC")) // Change icon color to custom hex
                         .accessibilityLabel("Play pronunciation")
                 }
-                
-                // Word in the default language (English)
-                if let translation = translations[selectedLanguage] {
-                    Text(translation.1) // Show English word
-                        .font(.title2)
-                        .padding()
-                        .foregroundColor(Color(hex: "#871BAC")) // Change text color to custom hex
-                }
             }
-            Spacer()
-        }
-    }
-    
-    // Function to convert text to speech
-    func speak(text: String) {
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: languageCode(for: selectedLanguage)) // Set the voice language
-        speechSynthesizer.speak(utterance) // Speak the text
-    }
-    
-    // Helper function to get the language code based on the selected language
-    func languageCode(for language: String) -> String {
-        switch language {
-        case "Chinese Cantonese":
-            return "zh-HK"
-        case "Chinese Mandarin":
-            return "zh-CN"
-        case "English":
-            return "en-US"
-        case "French":
-            return "fr-FR"
-        case "Japanese":
-            return "ja-JP"
-        case "Korean":
-            return "ko-KR"
-        case "Spanish":
-            return "es-ES"
-        default:
-            return "en-US" // Default to English if unknown
         }
     }
 }
