@@ -6,6 +6,7 @@ struct MainView: View {
     @State private var isCameraPickerPresented = false
     @State private var isPhotoLibraryPickerPresented = false
     @State private var selectedImage: UIImage? = nil
+    @State private var highestScoreLabel: String? = nil  // Store highest label from backend
     @State private var navigateToResultView = false
     @State private var navigateToHistoryView = false
     @State private var navigateToProfileView = false
@@ -13,6 +14,54 @@ struct MainView: View {
     @State private var navigateToSettingsView = false
     @State private var navigateToHomeView = false
     
+    // Function to send the image to Flask backend and receive the highest score label
+    func sendImageToBackend() {
+        guard let image = selectedImage else { return }
+
+        // Convert UIImage to JPEG data
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else { return }
+
+        // Convert image data to base64 string
+        let base64String = imageData.base64EncodedString()
+
+        // Create the URL for the POST request
+        guard let url = URL(string: "http://10.65.14.27:8000/upload") else {
+            print("Invalid URL")
+            return
+        }
+
+        // Create the request
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        // Create the JSON body
+        let jsonBody = [
+            "image": base64String,
+            "language": selectedLanguage
+        ]
+
+        // Convert dictionary to JSON data
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: jsonBody) else { return }
+
+        // Send the request
+        let task = URLSession.shared.uploadTask(with: request, from: jsonData) { data, response, error in
+            if let error = error {
+                print("Error: \(error)")
+                return
+            }
+
+            if let data = data, let jsonResponse = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+               let highestLabel = jsonResponse["highest_score_label"] as? String {
+                DispatchQueue.main.async {
+                    self.highestScoreLabel = highestLabel  // Store highest label returned from the backend
+                    self.navigateToResultView = true  // Navigate to the ResultView
+                }
+            }
+        }
+
+        task.resume()
+    }
 
     var body: some View {
         NavigationView {
@@ -35,12 +84,12 @@ struct MainView: View {
                         }
                         .sheet(isPresented: $isCameraPickerPresented, onDismiss: {
                             if selectedImage != nil {
-                                navigateToResultView = true
+                                sendImageToBackend()  // Send the image to the backend when captured
                             }
                         }) {
                             ImagePicker(isCamera: true, selectedImage: $selectedImage)
                         }
-                        
+
                         // Photo Library Button
                         Button(action: {
                             isPhotoLibraryPickerPresented = true
@@ -57,22 +106,22 @@ struct MainView: View {
                         }
                         .sheet(isPresented: $isPhotoLibraryPickerPresented, onDismiss: {
                             if selectedImage != nil {
-                                navigateToResultView = true
+                                sendImageToBackend()  // Send the image to the backend when selected
                             }
                         }) {
                             ImagePicker(isCamera: false, selectedImage: $selectedImage)
                         }
-                        
+
                     }
                     .padding()
-                    
+
                     // Language Picker
                     Text("Target Language")
                         .font(.title)
                         .foregroundColor(Color(hex: "#871BAC"))
-                    
+
                     Spacer().frame(height: 0)
-                    
+
                     Picker("Target Language", selection: $selectedLanguage) {
                         ForEach(languages, id: \.self) { language in
                             Text(language)
@@ -85,11 +134,13 @@ struct MainView: View {
                     .frame(maxWidth: .infinity, minHeight: 150)
                     .background(Color.white.opacity(0.2))
                     .cornerRadius(10)
-                    
-                    // Navigation Link to ResultView
-                    NavigationLink(destination: ResultView(selectedLanguage: selectedLanguage, selectedImage: selectedImage), isActive: $navigateToResultView) {
+
+                    // Navigation Link to ResultView (pass highestScoreLabel)
+                    NavigationLink(destination: ResultView(selectedLanguage: selectedLanguage, selectedImage: selectedImage, highestScoreLabel: highestScoreLabel), isActive: $navigateToResultView) {
                         EmptyView()
                     }
+
+                    // Other navigation links
                     NavigationLink(destination: HistoryView(), isActive: $navigateToHistoryView) {
                         EmptyView()
                     }
@@ -102,7 +153,8 @@ struct MainView: View {
                     NavigationLink(destination: NoteView(), isActive: $navigateToNoteView) {
                         EmptyView()
                     }
-                    
+
+                    // History Button
                     Button(action: {
                         navigateToHistoryView = true
                     }) {
@@ -122,25 +174,25 @@ struct MainView: View {
                             Button(action: {
                                 navigateToHomeView = true
                             }) {
-                                HStack{
+                                HStack {
                                     Image(systemName: "house.circle")
                                     Text("Home")
                                 }
                             }
-                            
+
                             Button(action: {
                                 navigateToProfileView = true
                             }) {
-                                HStack{
+                                HStack {
                                     Image(systemName: "person")
                                     Text("Account")
                                 }
                             }
-                            
+
                             Button(action: {
                                 navigateToNoteView = true
                             }) {
-                                HStack{
+                                HStack {
                                     Image(systemName: "note.text")
                                     Text("Notebook")
                                 }
@@ -148,7 +200,7 @@ struct MainView: View {
                             Button(action: {
                                 navigateToSettingsView = true
                             }) {
-                                HStack{
+                                HStack {
                                     Image(systemName: "gear")
                                     Text("Settings")
                                 }
@@ -161,16 +213,15 @@ struct MainView: View {
                                 Image("drop-down")
                                     .resizable()
                                     .frame(width: 20, height: 20)
-                                
+                                    .padding(.leading, 5)
                             }
-                            Divider()
+                            Spacer()
+                            Divider().frame(width: 500)
                         }
-                        
-                        
+                        .padding()
                     }
-                    
-                } // Toolbar
+                } // Toolbar Ended
             }
         }
     }
-    }
+}
