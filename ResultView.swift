@@ -5,6 +5,7 @@ struct ResultView: View {
     @State var selectedLanguage: String // State to hold the selected language
     var selectedImage: UIImage? // The selected image
     var highestScoreLabel: String?  // The highest label returned from the backend
+    var translatedText: String?  // The translated word from the backend
     @State var navigateToNoteView = false
     let speechSynthesizer = AVSpeechSynthesizer()
     let availableLanguages = [
@@ -48,33 +49,15 @@ struct ResultView: View {
         utterance.voice = AVSpeechSynthesisVoice(language: languageCode(for: selectedLanguage)) // Set the voice language
         speechSynthesizer.speak(utterance) // Speak the text
     }
-
+    
     var body: some View {
         VStack {
-            Text("PicSpeaks")
+            Text("Result View:")
                 .font(.largeTitle)
                 .fontWeight(.bold)
                 .padding()
-                .foregroundColor(Color(hex: "#871BAC")) // Change title color to custom hex
-            
-            // Display and allow user to pick the target language
-            HStack {
-                Text("Language: ")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(Color(hex: "#871BAC")) // Change text color to custom hex
-                
-                Picker("Language", selection: $selectedLanguage) { // Bind to selectedLanguage
-                    ForEach(availableLanguages.sorted(), id: \.self) { language in // Sort languages alphabetically
-                        Text(language).tag(language) // Use tags to link to the state variable
-                    }
-                }
-                .pickerStyle(MenuPickerStyle()) // Use menu picker style to allow changing
-                .font(.title2)
-                .foregroundColor(Color(hex: "#871BAC")) // Change picker text color to custom hex
-            }
-            .padding()
-            
+                .foregroundColor(Color(hex: "#871BAC")) // Title color
+            Divider()
             // Display the selected image
             if let image = selectedImage {
                 Image(uiImage: image)
@@ -89,23 +72,33 @@ struct ResultView: View {
                     .frame(maxWidth: 300)
                     .padding()
             }
-            
-            // Updated: Display the highest label returned by the backend
+
+            // Display the highest label returned by the backend
             if let label = highestScoreLabel {
                 Text("Detected Object: \(label)")
                     .font(.title)
-                    .fontWeight(.bold)  // Making the label more prominent
-                    .foregroundColor(Color(hex: "#871BAC"))  // Apply the custom color
                     .padding()
             } else {
                 Text("No label detected")
                     .font(.title)
-                    .foregroundColor(Color.red)  // Set red color for error case
                     .padding()
             }
-            
-            Spacer()
 
+            // Display the translated word
+            if let translated = translatedText {
+                Text("Translation: \(translated)")
+                    .font(.title)
+                    .foregroundColor(Color(hex: "#871BAC"))
+                    .padding()
+            } else {
+                Text("Translation Unavailable")
+                    .font(.title)
+                    .foregroundColor(Color(hex: "#871BAC"))
+                    .padding()
+            }
+
+            Spacer()
+            
             NavigationLink(destination: NoteView(), isActive: $navigateToNoteView) {
                 EmptyView()
             }
@@ -114,16 +107,19 @@ struct ResultView: View {
                 Button(action: {
                     navigateToNoteView = true
                 }) {
-                    HStack{
-                        Image(systemName: "note.text")
-                            .frame(width: 150, height: 150)
+                    HStack {
+                        Image("notes-icon")
+                            .resizable()
+                            .frame(width: 60, height: 60)
+                            .padding()
+                            .foregroundColor(Color(hex: "#871BAC"))
                     }
                 }
                 
                 // Pronunciation Button (Speaker)
                 Button(action: {
-                    if let label = highestScoreLabel {
-                        speak(text: label)  // Speak the highest scored label
+                    if let translated = translatedText {
+                        speak(text: translated) // Speak the translated word in the selected language
                     }
                 }) {
                     Image(systemName: "speaker.wave.2.fill")
