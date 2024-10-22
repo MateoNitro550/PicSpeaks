@@ -1,7 +1,7 @@
 <h1 align="center">PicSpeaks</h1>
 
 <p align="center">
-  <img src="./assets/Logo.png"> 
+  <img src="./assets/logo.png"> 
 </p> 
 
 ## What is PicSpeaks?
@@ -13,7 +13,7 @@ PicSpeaks is an iOS app designed to provide real-time object detection and trans
 Check out the demo video below to see PicSpeaks in action:
 
 <p align="center">
-  <img src="./assets/demo.mp4"> 
+  <img src="./assets/demo.mov"> 
 </p>
 
 ## Features
